@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="css/dist.css">
+    <title>Beranda</title>
+</head>
+
+<body>
+
+    <!-- header -->
+    <nav
+        class="relative font-poppins flex items-center justify-between flex-wrap bg-grey-darkest px-5 py-1 fixed w-full z-10 shadow-kShadow">
+        <div>
+            <img class="w-60 inline" src="assets/images/logo-n.png" alt="">
+        </div>
+
+        <div class="block lg:hidden">
+            <button
+                class="flex items-center px-3 py-2 border rounded text-grey border-grey-dark hover:text-white hover:border-white">
+                <svg class="fill-current h-3 w-3" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="w-full flex-grow lg:flex lg:items-center lg:w-auto hidden lg:block pt-6 lg:pt-0" id="nav-content">
+            <ul class="list-reset lg:flex justify-end flex-1 items-center">
+                <li class="mr-3">
+                    <a class="font-light font-poppins inline-block text-grey-dark no-underline hover:text-grey-lighter hover:text-underline py-2 px-4"
+                        href="#">Beranda</a>
+                </li>
+                <li class="mr-3">
+                    <a class="font-light font-poppins inline-block text-grey-dark no-underline hover:text-grey-lighter hover:text-underline py-2 px-4"
+                        href="#">Artikel</a>
+                </li>
+                <li class="mr-3">
+                    <a class="font-light font-poppins inline-block text-grey-dark no-underline hover:text-grey-lighter hover:text-underline py-2 px-4"
+                        href="#">Produk</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <!-- end of header -->
+
+        <ul id="test-carousel">
+            <li img-src="/assets/images/1.1.png">
+                
+            </li>
+            <li img-src="/assets/images/2.1.png">
+              
+            </li>
+            <li img-src="/assets/images/1.2.png">
+                
+            </li>
+        </ul>
+
+
+
+    <!-- footer -->
+    <div class="relative font-poppins">
+        <div class="absolute">
+            <div class="static">
+                <img class="w-full h-full" src="assets/images/devcoration.svg" alt="">
+            </div>
+            <div class="w-full static">
+                <p class="leading-10 text-center text-kBlack font-poppins">Copyright © 2021 Padmasana</p>
+            </div>
+        </div>
+    </div>
+    <!-- end of footer -->
+
+    <script src="/js/carousel/carousel.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,151 @@
+function Carousel(id, opts) {
+    this.init = function () {
+        this.el = id;
+        this.options = {
+            timeout: 1000,
+            responsive: {
+                lg: 1200,
+                md: 992,
+                sm: 768,
+                xs: 768
+            },
+            minHeight: 300,
+            width: window.innerWidth
+        };
+        this.options = Object.assign({}, this.options, opts);
+
+        this.ul = document.getElementById(id);
+
+        this.wrapper = document.createElement('div');
+        this.ul.parentNode.insertBefore(this.wrapper, this.ul)
+        this.wrapper.appendChild(this.ul)
+        this.wrapper.style.width = '100%'
+        this.wrapper.style.overflow = 'hidden'
+        this.wrapper.style.position = 'relative'
+
+        this.children = this.ul.getElementsByTagName('li');
+        this.childCount = this.ul.childElementCount;
+        this.ul.style.position = 'absolute'
+        this.wrapper.style.height = this.options.minHeight + 'px'
+
+        this.prevWidth = 0;
+        this.shiftCount = 0;
+        this.initialize = true
+        this.count = 0;
+        this.imgWidth = 0;
+        
+
+        this.showImage(0)
+        this.responsive();
+        this.loop();
+    }
+
+    this.responsive = function(){
+        let self = this
+        window.addEventListener('resize', function(){
+            self.options.width = window.innerWidth;
+            console.log("Width: "+self.options.width)
+            let el = self.ul.getElementsByTagName('li');
+            self.ul.style.minWidth = (self.options.width * self.childCount) + "px";
+            self.wrapperHeight();
+            for (let index = 0; index < el.length; index++) {
+                let img = el[index].getElementsByTagName('img')[0]
+                console.log("index: "+index+" img: "+img)
+                if(img != null && img != undefined){
+                    img.style.width = self.options.width + "px";
+                }
+            }
+                
+        });
+    }
+
+    this.loop = function () {
+        let self = this
+
+        console.log("count: " + self.count)
+
+        setTimeout(function () {
+            self.count++;
+            self.lazyLoad(self.count)
+            self.animate()
+        }, 8000)
+    }
+
+    this.wrapperHeight = function () {
+        let h = this.ul.offsetHeight;
+        if (h > this.options.minHeight || this.initialize) {
+            this.initialize = false
+            this.options.minHeight = h;
+        }
+        this.wrapper.style.height = h + 'px'
+    }
+
+    this.showImage = function (index) {
+        if (this.childCount <= index)
+            return;
+        this.lazyLoad(index)
+    }
+
+    this.lazyLoad = function (index) {
+        let t = this.children[index];
+        let self = this
+
+        if (t.childElementCount == 0) {
+            let el = document.createElement('img');
+            el.setAttribute('src', t.getAttribute('data-src'))
+            el.style.width = this.options.width + 'px'
+            let evn = function () {
+                if (self.prevWidth == 0) {
+                    self.imgWidth = self.prevWidth = self.children[index].offsetWidth;
+                    console.log(self.imgWidth * self.childCount)
+                    self.ul.style.minWidth = (self.options.width * self.childCount) + "px";
+                }
+                self.wrapperHeight();
+                el.removeEventListener('load', evn)
+            };
+            el.addEventListener('load', evn)
+            t.style.float = 'left'
+            t.appendChild(el)
+        }
+    }
+
+    this.cutAndPaste = function () {
+        //insert afters
+        this.children[0].parentNode.insertBefore(this.children[0], this.children[this.childCount - 1].nextSibling);
+        this.children = this.ul.getElementsByTagName('li');
+
+    }
+
+    this.animate = function () {
+        let c = 0;
+        let self = this;
+
+        function frame() {
+            c += 10;
+            self.shiftCount -= 10
+            self.ul.style.left = self.shiftCount + 'px' // show frame
+            // update parameters
+            if (c > self.options.width) // check finish condition
+            {
+                let xDif = self.options.width - c
+                self.shiftCount += xDif
+                self.ul.style.left = self.shiftCount + 'px'
+
+                clearInterval(carauselShiftid);
+                
+                setTimeout(function () {
+                    self.cutAndPaste();
+                    self.count = 0;
+                    self.ul.style.left = 0;
+                    self.shiftCount = 0;
+                }, 10);
+                self.loop();
+            }
+        }
+        var carauselShiftid = setInterval(frame, 15) // draw every 10ms
+    }
+    this.init();
+    console.log(this)
+}
+
+new Carousel("test-carousel", {});
