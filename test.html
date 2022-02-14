@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>test</title>
+</head>
+
+<body>
+    <div id="test">
+        <div>a</div>
+        <div>b</div>
+        <div>c</div>
+    </div>
+    <script>
+        let c = document.getElementById("test")
+        var a = []
+        Array.from(c.children).forEach(e => {
+            e.style.width = "100px"
+            e.style.float = "left"
+        })
+        a = c.querySelectorAll('div')
+        console.log(a[0].offsetLeft)
+        let x = a[0].cloneNode(true)
+        x.appendChild(document.createTextNode("e"))
+        x.classList.add("iinin")
+        console.log(x.offsetLeft)
+        c.insertBefore(x, a[0])
+        console.log(x.offsetLeft)
+        console.log(a[0].offsetLeft)
+    </script>
+</body>
+
+</html>
