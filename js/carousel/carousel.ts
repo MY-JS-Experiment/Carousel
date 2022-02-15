@@ -8,6 +8,11 @@ interface positionInterface{
     top:number
 }
 
+interface coordinate{
+    x:number,
+    y:number
+}
+
 class Carousel {
 
     private settings = {
@@ -22,10 +27,12 @@ class Carousel {
         slideMode: 'horizontal',
         slideMargin: 0,
         infinitiLoop: true,
-        responsive:true
+        responsive:true,
+        touchEvent: true,
+        swipeThreshold: 250
     }
     private el: HTMLElement
-    private children: NodeListOf<HTMLElement>
+    private children: Array<HTMLElement> = []
     private viewport: HTMLElement
     private minThreshold: number
     private maxThreshold: number
@@ -36,6 +43,12 @@ class Carousel {
     private position:positionInterface
     private windowWidth:number
     private windowHeight:number
+    private touch:{
+        start:coordinate,
+        end:coordinate,
+        originalPosition: positionInterface
+    }
+    private pointerId:number
     
 
     constructor(el: HTMLElement, params = {}) {
@@ -48,7 +61,9 @@ class Carousel {
     init(): void {
         this.windowHeight = window.innerHeight
         this.windowWidth = window.innerWidth
-        this.children = this.el.querySelectorAll(this.settings.elementSelector)
+        this.el.querySelectorAll(this.settings.elementSelector).forEach(e=>{
+            this.children.push((e as HTMLAreaElement))
+        })
         this.settings.minSlide = this.children.length < this.settings.minSlide ? this.children.length : this.settings.minSlide
         this.settings.maxSlide = this.children.length < this.settings.maxSlide ? this.children.length : this.settings.maxSlide
 
@@ -117,6 +132,7 @@ class Carousel {
         this.redraw()
         this.initialize = true
         if(this.settings.responsive){window.addEventListener('resize', ()=>{this.onResize()})}
+        if(this.settings.touchEvent){this.initTouch()}
     }
 
     onResize(): void {
@@ -126,22 +142,25 @@ class Carousel {
         if(newHeight != this.windowHeight || newWidth != this.windowWidth){
             this.windowHeight = newHeight
             this.windowWidth = newWidth
-            this.children.forEach(e=>{
-                e.style.width = this.getSlideWidth()
-            })
-            this.setSlidePosition()
+            this.redraw()
         }
     }
 
     redraw():void{
-        this.children = this.el.querySelectorAll(this.settings.elementSelector)
+        this.children.forEach(e=>{
+            e.style.width = this.getSlideWidth()
+        })
+        this.el.querySelectorAll('.cl-clone').forEach(e=>{
+            (e as HTMLElement).style.width = this.getSlideWidth()
+        })
+        this.setSlidePosition()
     }
 
 
     setSlidePosition():void{
         this.position = {
-            left: this.children[this.active.index * this.getMoveBy()].getBoundingClientRect().x,
-            top: this.children[this.active.index * this.getMoveBy()].getBoundingClientRect().y
+            left: this.children[this.active.index * this.getMoveBy()].offsetLeft,
+            top: this.children[this.active.index * this.getMoveBy()].offsetTop
         }
         if(this.settings.slideMode === 'horizontal'){
             this.setSlideAnimationProperty(-this.position.left, 'reset', 0)
@@ -157,7 +176,107 @@ class Carousel {
         return this.getNumberSlideShowing()
     }
 
-    
+    initTouch():void{
+        this.touch ={
+            start:{x: 0, y:0},
+            end:{x: 0, y:0},
+            originalPosition:{left: 0, top: 0}
+        }
+
+        'touchstart MSPointerDown pointerdown'.split(' ').forEach(e=>{
+            this.viewport.addEventListener(e, this.touchStart)
+        })
+    }
+
+    touchStart = (e:Event)=>{
+        if(e.type !== 'touchstart' && (e as PointerEvent).button !== 0)return
+        e.preventDefault()
+        
+        if(e instanceof PointerEvent && (e as PointerEvent).pointerId === undefined)
+            return
+        let touchPoint:TouchList|Array<PointerEvent> = (e instanceof TouchEvent && typeof (e as TouchEvent).changedTouches !== 'undefined') ? (e as TouchEvent).changedTouches : [(e as PointerEvent)]
+        this.touch.originalPosition = {left: this.el.getBoundingClientRect().x, top: this.el.getBoundingClientRect().y}   
+        this.touch.start = {x: touchPoint[0].pageX, y: touchPoint[0].pageY}
+        if(this.viewport.setPointerCapture && (e instanceof PointerEvent)){
+            this.pointerId = (e as PointerEvent).pointerId
+            this.viewport.setPointerCapture(this.pointerId)
+        }
+        
+        'touchmove MSPointerMove pointermove'.split(' ').forEach(e=>{
+            this.viewport.addEventListener(e, this.onTouchMove)
+        })
+        'touchend MSPointerUp pointerup'.split(' ').forEach(e=>{
+            this.viewport.addEventListener(e, this.onTouchEnd)
+        })
+        'MSPointerCancel pointercancel'.split(' ').forEach(e=>{
+            this.viewport.addEventListener(e, this.onPointerCancel)
+        })
+    }
+
+    onPointerCancel = (e:Event)=>{
+        e.preventDefault()
+        'touchmove MSPointerMove pointermove'.split(' ').forEach(e=>{
+            this.viewport.removeEventListener(e, this.onTouchMove)
+        })
+        'touchend MSPointerUp pointerup'.split(' ').forEach(e=>{
+            this.viewport.removeEventListener(e, this.onTouchEnd)
+        })
+        'MSPointerCancel pointercancel'.split(' ').forEach(e=>{
+            this.viewport.removeEventListener(e, this.onPointerCancel)
+        })
+        if(this.viewport.releasePointerCapture){
+            this.viewport.releasePointerCapture(this.pointerId)
+        }
+    }
+
+    onTouchEnd = (e:Event)=>{
+        e.preventDefault()
+        'touchmove MSPointerMove pointermove'.split(' ').forEach(e=>{
+            this.viewport.removeEventListener(e, this.onTouchMove)
+        })
+        let touchPoint:TouchList|Array<PointerEvent> = (e instanceof TouchEvent && typeof (e as TouchEvent).changedTouches !== 'undefined') ? (e as TouchEvent).changedTouches : [(e as PointerEvent)]
+        let distance:number = 0, oriPos = 0
+
+        this.touch.end = {x: touchPoint[0].pageX, y: touchPoint[0].pageY}
+        if(this.settings.slideMode === 'horizontal'){
+            distance = this.touch.end.x - this.touch.start.x
+            oriPos = this.touch.originalPosition.left
+        }else if(this.settings.slideMode === 'vertical'){
+            distance = this.touch.end.y - this.touch.start.y
+            oriPos = this.touch.originalPosition.top
+        }
+
+        if(Math.abs(distance) >= this.settings.swipeThreshold){
+            if (distance < 0)
+                this.nextSlide()
+            else
+                this.prevSlide()
+        }else{
+            this.setSlideAnimationProperty(oriPos, 'reset', 200)
+        }
+        'touchend MSPointerUp pointerup'.split(' ').forEach(e=>{
+            this.viewport.removeEventListener(e, this.onTouchEnd)
+        })
+        if(this.viewport.releasePointerCapture){
+            this.viewport.releasePointerCapture(this.pointerId)
+        }
+    }
+
+    onTouchMove = (e:Event)=>{
+        let touchPoint:TouchList|Array<PointerEvent> = (e instanceof TouchEvent && typeof (e as TouchEvent).changedTouches !== 'undefined') ? (e as TouchEvent).changedTouches : [(e as PointerEvent)],
+        value = 0,
+        change = 0
+        e.preventDefault()
+
+        if(this.settings.slideMode === 'horizontal'){
+            change = touchPoint[0].pageX - this.touch.start.x
+            value = this.touch.originalPosition.left + change
+        }else if(this.settings.slideMode === 'vertical'){
+            change = touchPoint[0].pageY - this.touch.start.y
+            value = this.touch.originalPosition.left + change
+        }
+        this.setSlideAnimationProperty(value, 'reset', 0)
+    }
 
     getNumberSlideShowing():number{
         var slidesShowing = 1,
@@ -232,6 +351,65 @@ class Carousel {
         }else if(type === 'reset'){
             this.el.style['-'+this.cssPrefix+'-transform'] = propValue
         }
+    }
+
+    setSlideIndex(slideIndex:number):number{
+        if(slideIndex < 0){
+            if(this.settings.infinitiLoop){
+                return this.getPagerQty() - 1
+            }else
+                return this.active.index
+        }else if(slideIndex >= this.getPagerQty()){
+            if(this.settings.infinitiLoop){
+                return 0
+            }else{
+                return this.active.index
+            }
+        }
+        return slideIndex
+    }
+
+    nextSlide():void{
+        let pageIndex  = this.active.index + 1
+        this.goToSlide(pageIndex, "next")
+    }
+
+    prevSlide():void{
+        let pageIndex  = this.active.index - 1
+        this.goToSlide(pageIndex, "prev")
+    }
+
+    goToSlide(index:number, direction:string){
+        let oldIndex = this.active.index
+        this.active.index = this.setSlideIndex(index)
+        let position:positionInterface = null
+        this.working = true
+
+        this.active.last = this.active.index === this.getPagerQty() - 1
+
+        if(this.active.last && direction === 'prev'){
+            console.log("this is last")
+        }else if(this.active.index === 0 && direction === 'next'){
+            console.log("this is first")
+        }
+        
+        if(this.active.index >=0){
+           let el =  this.children[this.active.index]
+           position = {
+               left: el.offsetLeft,
+               top: el.offsetTop
+           }
+        }
+
+        if(position !== null){
+            if(this.settings.slideMode === 'horizontal'){
+                this.setSlideAnimationProperty(-position.left, 'reset', 200)
+            }else if(this.settings.slideMode === 'vertical'){
+                this.setSlideAnimationProperty(-position.top, 'reset', 200)
+            }
+        }
+
+        
     }
 }
 
